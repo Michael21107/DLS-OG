@@ -13,7 +13,7 @@ namespace DLS
     internal class Entrypoint
     {
         //List of Configured DLSModels by .xml files
-        public static List<DLSModel> dlsModels = new List<DLSModel>();
+        public static Dictionary<Model, DLSModel> DLSModelsDict = new Dictionary<Model, DLSModel>();
         //Vehicles currently being managed by DLS
         public static List<ActiveVehicle> activeVehicles = new List<ActiveVehicle>();
         //List of All TAgroups
@@ -34,14 +34,19 @@ namespace DLS
         public static bool BLightsEnabled = true;
         public static bool UIEnabled = true;
         public static bool SirenKill = false;
+        public static bool PatchExtras = false;
+        public static bool LogToConsole = false;
 
         public static void Main()
         {
             //Initiates Log File
             Log Log = new Log();
 
-            //Checks if .ini file is created.
+            // Checks if .ini file is created.
             Settings.IniCheck();
+
+            // Direct logging output to RPH console if configured
+            LogToConsole = Settings.SET_LOGTOCONSOLE;
 
             //Version check and logging.
             FileVersionInfo rphVer = FileVersionInfo.GetVersionInfo("ragepluginhook.exe");
@@ -57,22 +62,20 @@ namespace DLS
             Game.LogTrivial($"LOADED DLS v{pluginInfo.Version}");
 
             //Load DLS Models
-            dlsModels = Vehicles.GetAllModels();
+            "Loading: DLS Vehicle Configurations".ToLog();
+            DLSModelsDict = Vehicles.GetAllModels();
             "Loaded: DLS Vehicle Configurations".ToLog();
 
             //Load TAgroups
+            "Loading: TAgroups".ToLog();
             tagroups = Vehicles.GetAllTAgroups();
             "Loaded: TAgroups".ToLog();
-
-            //Loads Keys
-            Controls.RefreshKeys();
-            "Loaded: DLS Keys".ToLog();
 
             //Loads MPDATA audio
             NativeFunction.Natives.SET_AUDIO_FLAG("LoadMPData", true);
 
             //If DLS controls lights/sirens on AI vehicles            
-            AILightsC = Settings.ReadKey("Settings", "AILightsControl").ToBoolean();
+            AILightsC = Settings.SET_AILC;
 
             //Creates player controller
             "Loading: DLS - Player Controller".ToLog();
@@ -92,21 +95,30 @@ namespace DLS
             "Loaded: DLS - Cleanup Manager".ToLog();
 
             //If DLS controls lights/sirens on non-DLS vehicles
-            SCforNDLS = Settings.ReadKey("Settings", "SirenControlNonDLS").ToBoolean();            
+            SCforNDLS = Settings.SET_SCNDLS;            
 
             //If DLS controls the indicators          
-            IndEnabled = Settings.ReadKey("Settings", "IndEnabled").ToBoolean();
+            IndEnabled = Settings.SET_INDENABLED;
 
             //If DLS enables brake lights            
-            BLightsEnabled = Settings.ReadKey("Settings", "BrakeLightsEnabled").ToBoolean();
+            BLightsEnabled = Settings.SET_BRAKELIGHT;
 
             //If DLS UI is enabled
-            UIEnabled = Settings.ReadKey("Settings", "UIEnabled").ToBoolean();
+            UIEnabled = Settings.SET_UIENABLED;
             if (UIEnabled)
                 UIManager.Process();
 
             //If Siren Kill is enabled
-            SirenKill = Settings.ReadKey("Settings", "SirenKill").ToBoolean();
+            SirenKill = Settings.SET_SIRENKILL;
+
+            //If extra patch is enabled
+            PatchExtras = Settings.SET_PATCHEXTRAS;
+            if (PatchExtras)
+            {
+                bool patched = ExtraRepairPatch.DisableExtraRepair();
+                if (patched) "Patched extra repair".ToLog();
+                else "ERROR: Failed to patch extra repair".ToLog();
+            }
         }
 
         private static void OnUnload(bool isTerminating)
@@ -131,7 +143,9 @@ namespace DLS
                     {
                         aVeh.Vehicle.EmergencyLightingOverride = aVeh.DefaultEL;
                         aVeh.Vehicle.IsSirenSilent = aVeh.IsSirenSilent;
+                        aVeh.Vehicle.IndicatorLightsStatus = VehicleIndicatorLightsStatus.Off;
                         NativeFunction.Natives.SET_VEHICLE_RADIO_ENABLED(aVeh.Vehicle, true);
+                        Lights.ResetExtras(aVeh);
                         ("Refreshed " + aVeh.Vehicle.Handle).ToLog();
                     }
                     else
@@ -142,14 +156,7 @@ namespace DLS
         }
 
         [ConsoleCommand]
-        private static void Command_RefreshKeys()
-        {
-            Controls.RefreshKeys();
-            Game.LogTrivial("Reloaded Keys!");
-        }
-
-        [ConsoleCommand]
-        private static void Command_GetStaging()
+        private static void Command_GetStagingInfo()
         {
             Vehicle veh = Game.LocalPlayer.Character.CurrentVehicle;
 

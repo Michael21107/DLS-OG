@@ -2,17 +2,18 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Xml.Serialization;
 
 namespace DLS.Utils
 {
     class Vehicles
     {
-        public static List<DLSModel> GetAllModels()
+        public static Dictionary<Model, DLSModel> GetAllModels()
         {
             string path = @"Plugins\DLS\";
             _ = new DLSModel();
-            List<DLSModel> listModels = new List<DLSModel>();
+            Dictionary<Model, DLSModel> dictModels = new Dictionary<Model, DLSModel>();
             foreach (string file in Directory.EnumerateFiles(path, "*.xml"))
             {
                 try
@@ -20,31 +21,100 @@ namespace DLS.Utils
                     XmlSerializer mySerializer = new XmlSerializer(typeof(DLSModel));
                     StreamReader streamReader = new StreamReader(file);
 
-                    DLSModel model = (DLSModel)mySerializer.Deserialize(streamReader);
+                    DLSModel dlsModel = (DLSModel)mySerializer.Deserialize(streamReader);
                     streamReader.Close();
 
-                    model.Name = Game.GetHashKey(Path.GetFileNameWithoutExtension(file)).ToString();
+                    if(dlsModel.SpecialModes.StageOrder != "")
+                    {
+                        dlsModel.AvailableLightStages.Add(LightStage.Off);
+                        string[] stages = dlsModel.SpecialModes.StageOrder.Split(',');
+                        for(int i = 0; i < stages.Count(); i++)
+                        {
+                            stages[i].Trim();
+                            dlsModel.AvailableLightStages.Add((LightStage)stages[i].ToInt32());
+                        }
+                    }
+                    else
+                    {
+                        dlsModel.AvailableLightStages.Add(LightStage.Off);
+                        if (dlsModel.Sirens.Stage1Setting != null)
+                            dlsModel.AvailableLightStages.Add(LightStage.One);
+                        if (dlsModel.Sirens.Stage2Setting != null)
+                            dlsModel.AvailableLightStages.Add(LightStage.Two);
+                        if (dlsModel.Sirens.Stage3Setting != null)
+                            dlsModel.AvailableLightStages.Add(LightStage.Three);
+                    }                    
 
-                    model.AvailableLightStages.Add(LightStage.Off);
-                    if (model.Sirens.Stage1Setting != null)
-                        model.AvailableLightStages.Add(LightStage.One);
-                    if (model.Sirens.Stage2Setting != null)
-                        model.AvailableLightStages.Add(LightStage.Two);
-                    if (model.Sirens.Stage3Setting != null)
-                        model.AvailableLightStages.Add(LightStage.Three);
+                    dlsModel.AvailableSirenStages.Add(SirenStage.Off);
+                    if (dlsModel.SoundSettings.Tone1 != "")
+                        dlsModel.AvailableSirenStages.Add(SirenStage.One);
+                    if (dlsModel.SoundSettings.Tone2 != "")
+                        dlsModel.AvailableSirenStages.Add(SirenStage.Two);
+                    if (dlsModel.SoundSettings.Tone3 != "")
+                        dlsModel.AvailableSirenStages.Add(SirenStage.Warning);
+                    if (dlsModel.SoundSettings.Tone4 != "")
+                        dlsModel.AvailableSirenStages.Add(SirenStage.Warning2);
 
-                    model.AvailableSirenStages.Add(SirenStage.Off);
-                    if (model.SoundSettings.Tone1 != "")
-                        model.AvailableSirenStages.Add(SirenStage.One);
-                    if (model.SoundSettings.Tone2 != "")
-                        model.AvailableSirenStages.Add(SirenStage.Two);
-                    if (model.SoundSettings.Tone3 != "")
-                        model.AvailableSirenStages.Add(SirenStage.Warning);
-                    if (model.SoundSettings.Tone4 != "")
-                        model.AvailableSirenStages.Add(SirenStage.Warning2);
+                    if(dlsModel.TrafficAdvisory.Type != "off" && dlsModel.TrafficAdvisory.Sirens != "")
+                    {
+                        string[] taSirens = dlsModel.TrafficAdvisory.Sirens.Trim().Split(',');
+                        List<List<string>> splitSirens;                        
+                        switch (dlsModel.TrafficAdvisory.Type)
+                        {
+                            case "three":
+                                splitSirens = Extensions.Chunk(taSirens, 3);
+                                dlsModel.TrafficAdvisory.l = String.Join(",", splitSirens[0]);
+                                dlsModel.TrafficAdvisory.c = String.Join(",", splitSirens[1]);
+                                dlsModel.TrafficAdvisory.r = String.Join(",", splitSirens[2]);
+                                break;
+                            case "four":
+                                splitSirens = Extensions.Chunk(taSirens, 4);
+                                dlsModel.TrafficAdvisory.l = String.Join(",", splitSirens[0]);
+                                dlsModel.TrafficAdvisory.cl = String.Join(",", splitSirens[1]);
+                                dlsModel.TrafficAdvisory.cr = String.Join(",", splitSirens[2]);
+                                dlsModel.TrafficAdvisory.r = String.Join(",", splitSirens[3]);
+                                break;
+                            case "five":
+                                splitSirens = Extensions.Chunk(taSirens, 5);
+                                dlsModel.TrafficAdvisory.l = String.Join(",", splitSirens[0]);                                
+                                dlsModel.TrafficAdvisory.cl = String.Join(",", splitSirens[1]);
+                                dlsModel.TrafficAdvisory.c = String.Join(",", splitSirens[2]);
+                                dlsModel.TrafficAdvisory.cr = String.Join(",", splitSirens[3]);                                
+                                dlsModel.TrafficAdvisory.r = String.Join(",", splitSirens[4]);
+                                break;
+                            case "six":
+                                splitSirens = Extensions.Chunk(taSirens, 6);
+                                dlsModel.TrafficAdvisory.l = String.Join(",", splitSirens[0]);
+                                dlsModel.TrafficAdvisory.el = String.Join(",", splitSirens[1]);
+                                dlsModel.TrafficAdvisory.cl = String.Join(",", splitSirens[2]);
+                                dlsModel.TrafficAdvisory.cr = String.Join(",", splitSirens[3]);
+                                dlsModel.TrafficAdvisory.er = String.Join(",", splitSirens[4]);
+                                dlsModel.TrafficAdvisory.r = String.Join(",", splitSirens[5]);
+                                break;
+                        }
+                    }                    
 
-                    listModels.Add(model);
-                    ("Added: " + model.Name).ToLog();
+                    string affectedModels = dlsModel.Models.Trim();
+                    if (affectedModels.Length > 0) {
+                        foreach (string affectedModel in affectedModels.Split(','))
+                        {
+                            Model model = new Model(affectedModel);
+                            if (!dictModels.ContainsKey(model))
+                            {
+                                dictModels.Add(model, dlsModel);
+                                ("Added: " + affectedModel + " from " + Path.GetFileName(file)).ToLog();
+                            }
+                            else
+                            {
+                                ("WARNING: Conflict in " + file).ToLog();
+                            }
+                        }
+                    }
+                    else
+                    {
+                        dictModels.Add(new Model(Path.GetFileNameWithoutExtension(file)), dlsModel);         
+                        ("Added: " + Path.GetFileNameWithoutExtension(file) + " from " + Path.GetFileName(file)).ToLog();
+                    }
                 }
                 catch (Exception e)
                 {
@@ -52,7 +122,7 @@ namespace DLS.Utils
                     Game.LogTrivial("VCF IMPORT ERROR (" + Path.GetFileNameWithoutExtension(file) + "): " + e.Message);
                 }
             }
-            return listModels;
+            return dictModels;
         }
 
         public static Dictionary<string, TAgroup> GetAllTAgroups()
@@ -89,7 +159,7 @@ namespace DLS.Utils
             DLSModel dlsModel = veh.GetDLS();
             if (activeVeh == null)
                 activeVeh = veh.GetActiveVehicle();
-            string name = dlsModel.Name + " | " + activeVeh.LightStage.ToString() + " | " + activeVeh.TAStage.ToString() + " | " + activeVeh.SBOn.ToString();
+            string name = veh.Model.Name + " | " + activeVeh.LightStage.ToString() + " | " + activeVeh.TAStage.ToString() + " | " + activeVeh.SBOn.ToString();
             uint key = Game.GetHashKey(name);
             EmergencyLighting eL;
             if (Entrypoint.UsedPool.Count > 0 && Entrypoint.UsedPool.ContainsKey(key))
@@ -166,18 +236,18 @@ namespace DLS.Utils
         public static bool GetSirenKill(ActiveVehicle activeVehicle)
         {
             Vehicle veh = activeVehicle.Vehicle;
+            bool _ = Entrypoint.SirenKill;
             if (veh)
             {
                 DLSModel dlsModel = veh.GetDLS();
                 if (dlsModel != null)
-                {
-                    bool _ = Entrypoint.SirenKill;
+                {                    
                     if (dlsModel.SoundSettings.SirenKillOverride.ToBoolean() == true)
                         _ = dlsModel.SoundSettings.SirenKillOverride.ToBoolean();
                     return _;
                 }
             }
-            return false;
+            return _;
         }
     }
 }

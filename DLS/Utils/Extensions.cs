@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
@@ -25,11 +26,8 @@ namespace DLS.Utils
         {
             if (!veh)
                 return null;
-            for (int i = 0; i < Entrypoint.dlsModels.Count; i++)
-            {
-                if (Entrypoint.dlsModels[i].Name == veh.Model.Hash.ToString())
-                    return Entrypoint.dlsModels[i];
-            }
+            if (Entrypoint.DLSModelsDict.ContainsKey(veh.Model))
+                return Entrypoint.DLSModelsDict[veh.Model];
             return null;
         }
         internal static ActiveVehicle GetActiveVehicle(this Vehicle veh)
@@ -45,6 +43,8 @@ namespace DLS.Utils
         }
         internal static void ToLog(this string log)
         {
+            if (Entrypoint.LogToConsole) Game.LogTrivial(log);
+
             string path = @"Plugins/DLS.log";
             using (StreamWriter writer = new StreamWriter(path, true))
             {
@@ -141,22 +141,18 @@ namespace DLS.Utils
         {
             return dlsModel.AvailableSirenStages.Contains(sirenStage);
         }
-        internal static LightStage NextLightStage(this List<LightStage> list, LightStage currentItem, bool includeFirst = true)
+
+        internal static T Next<T>(this List<T> list, T currentItem)
         {
-            if (currentItem != LightStage.Empty && !list.Contains(currentItem))
-                return currentItem;
-            int index;
-            if (currentItem == LightStage.Empty)
-                index = list.IndexOf(LightStage.Off) + 1;
-            else
-                index = list.IndexOf(currentItem) + 1;
-            if (index > list.Count - 1)
-            {
-                if (includeFirst)
-                    index = 0;
-                else
-                    index = 1;
-            }
+            int index = list.IndexOf(currentItem);
+            index = (index + 1) % list.Count;
+            return list[index];
+        }
+
+        internal static T Previous<T>(this List<T> list, T currentItem)
+        {
+            int index = list.IndexOf(currentItem);
+            index = (list.Count + index - 1) % list.Count;
             return list[index];
         }
 
@@ -173,6 +169,16 @@ namespace DLS.Utils
                     index = 1;
             }
             return list[index];
+        }
+
+        public static List<List<T>> Chunk<T>(IEnumerable<T> data, int numArrays)
+        {
+            var size = data.Count() / numArrays;
+            return data
+                  .Select((x, i) => new { Index = i, Value = x })
+                  .GroupBy(x => x.Index / size)
+                  .Select(x => x.Select(v => v.Value).ToList())
+                  .ToList();
         }
     }
 }

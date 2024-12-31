@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- DLS v1.1.1 VEHICLE CONFIGURATION FILE -->
+<!-- DLS OG VEHICLE CONFIGURATION FILE -->
 <Model>
 	<SpecialModes>
-		<!-- Name of the Folder inside Plugins/DLS/UI -->
+		<!-- Name of the Folder inside Plugins/DLS OG/UI -->
 		<SirenUI></SirenUI>
 		<!-- none, stage1, stage2, stage3, custom1, custom2 -->
 		<PresetSirenOnLeaveVehicle>none</PresetSirenOnLeaveVehicle>

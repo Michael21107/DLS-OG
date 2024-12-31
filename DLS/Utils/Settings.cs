@@ -5,7 +5,7 @@ namespace DLS.Utils
 {
     class Settings
     {
-        internal static InitializationFile INI = new InitializationFile(@"Plugins\DLS.ini");
+        internal static InitializationFile INI = new InitializationFile(@"Plugins\DLS OG.ini");
 
         // General
         public static Keys GEN_MODIFIER { get; } = INI.ReadEnum("Keyboard", "Modifier", Keys.Shift);
@@ -55,10 +55,10 @@ namespace DLS.Utils
         {
             if (INI.Exists())
             {
-                "Loaded: DLS.ini".ToLog();
+                "Loaded: DLS OG.ini".ToLog();
                 return;
             }
-            "ERROR: DLS.ini was not found!".ToLog();
+            "ERROR: DLS OG.ini was not found!".ToLog();
         }
     }
 }
